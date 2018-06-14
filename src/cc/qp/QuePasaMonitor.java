@@ -15,11 +15,11 @@ public class QuePasaMonitor implements QuePasa, Practica {
      * @attrubute condiciones Mapa del tipo <K,V> siendo K el Uid del usuario y V una lista LIFO con las condiciones del monitor
      * @attribute mutex Monitor
      */
-
+    private LinkedList<Integer> usuarios = new LinkedList<Integer>();
     private Map<String, LinkedList<Integer>> miembros = new HashMap<String, LinkedList<Integer>>();
     private Map<String, Integer> administrador = new HashMap<String, Integer>();
     private Map<Integer, LinkedList<Mensaje>> mensajes = new HashMap<Integer, LinkedList<Mensaje>>();
-    private Map<Integer, LinkedList<Monitor.Cond>> condiciones = new HashMap<Integer, LinkedList<Monitor.Cond>>();
+    private Map<Integer, Monitor.Cond> condiciones = new HashMap<Integer, Monitor.Cond>();
     private Monitor mutex = new Monitor();
 
     /**
@@ -53,6 +53,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
         LinkedList<Integer> listaMiembros = new LinkedList<Integer>();
         listaMiembros.add(creadorUid);
         miembros.put(grupo, listaMiembros);
+        usuarios.add(creadorUid);
         if (!mensajes.containsKey(creadorUid)) {
             LinkedList<Mensaje> mensajes = new LinkedList<Mensaje>();
             this.mensajes.put(creadorUid, mensajes);
@@ -96,6 +97,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
         mutex.enter();
         if (administrador.containsValue(creadorUid) && !miembros.get(grupo).contains(nuevoMiembroUid)) {
             miembros.get(grupo).add(nuevoMiembroUid);
+            usuarios.add(nuevoMiembroUid);
             if (!mensajes.containsKey(nuevoMiembroUid)) {
                 LinkedList<Mensaje> mensajes = new LinkedList<Mensaje>();
                 this.mensajes.put(nuevoMiembroUid, mensajes);
@@ -121,11 +123,11 @@ public class QuePasaMonitor implements QuePasa, Practica {
             Mensaje mensaje = new Mensaje(remitenteUid, grupo, contenidos);
             for (Integer indexMiembro : miembros.get(grupo)) {
                 mensajes.get(indexMiembro).addLast(mensaje);
-                desbloquear(indexMiembro);
             }
         } else {
             throw new PreconditionFailedException();
         }
+        desbloquear();
         mutex.leave();
     }
 
@@ -139,30 +141,26 @@ public class QuePasaMonitor implements QuePasa, Practica {
     public Mensaje leer(int uid) {
         mutex.enter();
         if (!mensajes.containsKey(uid) || mensajes.get(uid).isEmpty()) {
-            Monitor.Cond condicion = mutex.newCond();
-
             if (!this.condiciones.containsKey(uid)) {
-                LinkedList<Monitor.Cond> ConditionList = new LinkedList<Monitor.Cond>();
-                ConditionList.addLast(condicion);
-                this.condiciones.put(uid, ConditionList);
+                Monitor.Cond condicion = mutex.newCond();
+                this.condiciones.put(uid, condicion);
 
 
             } else {
-                this.condiciones.get(uid).addLast(condicion);
-            }
-
-            this.condiciones.get(uid).getLast().await();
-
-            while (this.condiciones.containsKey(uid) && !this.condiciones.get(uid).isEmpty() && this.condiciones.get(uid).getLast().waiting() > 0) {
-                desbloquear(uid);
-            }
-
-            if (this.condiciones.get(uid).isEmpty()) {
                 this.condiciones.remove(uid);
+                Monitor.Cond condicion = mutex.newCond();
+                this.condiciones.put(uid,condicion);
             }
+
+            this.condiciones.get(uid).await();
+
+            /**if (this.condiciones.get(uid).isEmpty()) {
+                this.condiciones.remove(uid);
+            }*/
         }
 
         Mensaje mensaje = mensajes.get(uid).pop();
+        desbloquear();
         mutex.leave();
         return mensaje;
     }
@@ -170,13 +168,16 @@ public class QuePasaMonitor implements QuePasa, Practica {
     /**
      * Desbloquea el hilo
      *
-     * @param uid Uid del miembro cuyas condiciones hay que sacar de la lista
+     *
      */
-    private void desbloquear(int uid) {
-        mutex.enter();
-        if (!(condiciones.get(uid) == null) && !condiciones.get(uid).isEmpty() && condiciones.get(uid).getLast().waiting() > 0) {
-            this.condiciones.get(uid).pop().signal();
+    private void desbloquear() {
+        boolean aux = false;
+        for (int i = 0; i < usuarios.size(); i++) {
+            if (!aux && this.usuarios != null && this.usuarios.get(i) != null && this.condiciones.get(usuarios.get(i)) != null
+                    && this.condiciones.get(usuarios.get(i)).waiting() > 0 && !this.mensajes.get(usuarios.get(i)).isEmpty()) {
+                this.condiciones.get(usuarios.get(i)).signal();
+                aux = true;
+            }
         }
-        mutex.leave();
     }
 }
