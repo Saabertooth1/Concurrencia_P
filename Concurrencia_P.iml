@@ -7,6 +7,20 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Extra Libraries" level="application" />
+    <orderEntry type="module-library" exported="">
+      <library name="Extra Libraries">
+        <CLASSES>
+          <root url="file://$MODULE_DIR$/../Extra Libraries" />
+        </CLASSES>
+        <JAVADOC>
+          <root url="file://$MODULE_DIR$/lib/doc" />
+        </JAVADOC>
+        <SOURCES>
+          <root url="file://$MODULE_DIR$/../Extra Libraries" />
+        </SOURCES>
+        <jarDirectory url="file://$MODULE_DIR$/../Extra Libraries" recursive="false" />
+        <jarDirectory url="file://$MODULE_DIR$/../Extra Libraries" recursive="false" type="SOURCES" />
+      </library>
+    </orderEntry>
   </component>
 </module>
