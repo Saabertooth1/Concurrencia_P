@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eclipse-userlibraries>
+  <library name="Extra Libraries">
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/jcsp.jar" />
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/cclib.jar" />
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/aedlib.jar" />
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/stdlib.jar" />
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/bcel-5.2.jar" />
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/junit-4.12.jar" />
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/CorrectorOffline.jar" />
+    <archive path="C:/Users/Nacho/IdeaProjects/Extra Libraries/hamcrest-core-1.3.jar" />
+  </library>
+</eclipse-userlibraries>
+
