@@ -2,8 +2,6 @@ package cc.qp;
 
 import es.upm.babel.cclib.Monitor;
 
-
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -20,8 +18,8 @@ public class QuePasaMonitor implements QuePasa, Practica {
     private Map<String, Integer> administrador = new HashMap<String, Integer>();
     private Map<Integer, LinkedList<Mensaje>> mensajes = new HashMap<Integer, LinkedList<Mensaje>>();
     private LinkedList<Monitor.Cond> conditions = new LinkedList<Monitor.Cond>();
-    private Map<Integer, Integer> condiciones = new HashMap<Integer, Integer>();
     private LinkedList<Integer> usuarios = new LinkedList<Integer>();
+    //private Map<Integer, Integer> condiciones = new HashMap<Integer, Integer>();
     private Monitor mutex;
     //private Monitor.Cond cLeer;
 
@@ -61,14 +59,14 @@ public class QuePasaMonitor implements QuePasa, Practica {
         LinkedList<Integer> listaMiembros = new LinkedList<Integer>();
         listaMiembros.add(creadorUid);
         miembros.put(grupo, listaMiembros);
-        if (!condiciones.containsKey(creadorUid)){
+        if (!usuarios.contains(creadorUid)){
             Monitor.Cond cLeer = mutex.newCond();
             conditions.addLast(cLeer);
-            condiciones.put(creadorUid, conditions.size()-1 );
+            usuarios.addLast(creadorUid);
         }
         if (!mensajes.containsKey(creadorUid)) {
-            LinkedList<Mensaje> mensajes = new LinkedList<Mensaje>();
-            this.mensajes.put(creadorUid, mensajes);
+            LinkedList<Mensaje> mensajesAux = new LinkedList<Mensaje>();
+            mensajes.put(creadorUid, mensajesAux);
         }
         mutex.leave();
     }
@@ -115,10 +113,11 @@ public class QuePasaMonitor implements QuePasa, Practica {
         if (administrador.containsValue(creadorUid) && !miembros.get(grupo).contains(nuevoMiembroUid)) {
             LinkedList<Integer> aux = miembros.get(grupo);
             aux.add(nuevoMiembroUid);
-            if (!condiciones.containsKey(nuevoMiembroUid)){
+            miembros.put(grupo, aux);
+            if (!usuarios.contains(nuevoMiembroUid)){
                 Monitor.Cond cLeer = mutex.newCond();
                 conditions.addLast(cLeer);
-                condiciones.put(nuevoMiembroUid, conditions.size()-1);
+                usuarios.addLast(nuevoMiembroUid);
             }
             if (!mensajes.containsKey(nuevoMiembroUid)) {
                 LinkedList<Mensaje> mensajes = new LinkedList<Mensaje>();
@@ -169,12 +168,12 @@ public class QuePasaMonitor implements QuePasa, Practica {
         mutex.enter();
         Monitor.Cond cLeer;
         if (!mensajes.containsKey(uid) || mensajes.get(uid).isEmpty()) {
-            if (!condiciones.containsKey(uid)){
+            if (!usuarios.contains(uid)){
                 cLeer = mutex.newCond();
                 conditions.addLast(cLeer);
-                condiciones.put(uid, conditions.size()-1);
+                usuarios.addLast(uid);
             }
-            conditions.get(condiciones.get(uid)).await();
+            conditions.get(usuarios.indexOf(uid)).await();
         }
         LinkedList<Mensaje> aux = mensajes.get(uid);
         Mensaje mensaje = aux.pop();
@@ -185,10 +184,10 @@ public class QuePasaMonitor implements QuePasa, Practica {
     }
 
     private void unblock(){
-        if (!usuarios.isEmpty()){
-            for (Integer usuario : usuarios){
-                if (mensajes.containsKey(usuario) && !mensajes.get(usuario).isEmpty()){
-                    conditions.get(condiciones.get(usuario)).signal();
+        if (!conditions.isEmpty()){
+            for (int i = 0; i < conditions.size(); i++){
+                if (mensajes.containsKey(usuarios.get(i)) && !mensajes.get(usuarios.get(i)).isEmpty()){
+                    conditions.get(i).signal();
                     break;
                 }
             }
