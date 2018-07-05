@@ -87,45 +87,38 @@ public class QuePasaMonitor implements QuePasa, Practica {
      */
 
     public void salirGrupo(int usuarioUid, String grupo) throws PreconditionFailedException {
+    	
         mutex.enter();
-        /**if ((administrador.get(grupo) != null && miembros.get(grupo) != null) && (administrador.get(grupo).equals(usuarioUid) || miembros.get(grupo).contains(usuarioUid))) {
-            LinkedList<Mensaje> listaMensajes = mensajes.get(usuarioUid);
-            for (int i = 0; i < listaMensajes.size(); i++) {
-                if (listaMensajes.get(i).getGrupo().equals(grupo)) {
-                    listaMensajes.remove(i);
-                }
-            }
-            mensajes.put(usuarioUid, listaMensajes);
-            LinkedList<Integer> listaMiembros = miembros.get(grupo);
-            listaMiembros.removeFirstOccurrence(usuarioUid);
-            miembros.put(grupo, listaMiembros);*/
+     
        if( miembros.get(grupo) == null || (administrador.containsKey(grupo) && administrador.get(grupo) == usuarioUid ) || !miembros.get(grupo).contains(usuarioUid)){
     	   
             mutex.leave();
             throw new PreconditionFailedException();
        }   
        
-       for(int usuario = 0; usuario < usuarios.size(); usuario++){
+       for(int usuario = 0; usuario < this.usuarios.size(); usuario++){
 			
 			if(usuario == usuarioUid){
 				
 				this.usuarios.remove(usuarioUid);
 				
 			}
-		}
+		}       
        
-       LinkedList<Mensaje> listaMensajes = mensajes.get(usuarioUid);
+       miembros.get(grupo).removeFirstOccurrence(usuarioUid);
        
-		for (int i = 0; i < listaMensajes.size(); i++) {
+       if (mensajes.get(usuarioUid) != null) {
+    	  
+    	   
+			LinkedList<Mensaje> listaMensajes = mensajes.get(usuarioUid);
+			Iterator<Mensaje> pos = listaMensajes.iterator();
 			
-			if (listaMensajes.get(i).getGrupo().equals(grupo)) {
-				
-				listaMensajes.remove(i);
+			while(pos.hasNext()) {
+				if (pos.next().getGrupo().equals(grupo)) {
+					pos.remove();
+				};
 			}
-		}
-       
-		miembros.get(grupo).removeFirstOccurrence(usuarioUid);
-    		
+       }
        
         mutex.leave();
     }
@@ -140,7 +133,9 @@ public class QuePasaMonitor implements QuePasa, Practica {
      */
 
     public void anadirMiembro(int creadorUid, String grupo, int nuevoMiembroUid) throws PreconditionFailedException {
+    	
         mutex.enter();
+        
         if (!administrador.containsKey(grupo) || administrador.get(grupo) != creadorUid || administrador.get(grupo) == nuevoMiembroUid || (miembros.get(grupo) != null && miembros.get(grupo).contains(nuevoMiembroUid))) {
         	
         	mutex.leave();
@@ -150,12 +145,21 @@ public class QuePasaMonitor implements QuePasa, Practica {
            
             miembros.get(grupo).add(nuevoMiembroUid);
             
-            if(creadorUid != nuevoMiembroUid){
+            boolean encontrado = false;
+            
+            for(int i = 0; i < usuarios.size(); i++){
+            	
+            	if(usuarios.get(i).equals(nuevoMiembroUid)){
+            		
+            		encontrado = true;
+            	}
+            }
+        
+            if(!encontrado){
             	
             	this.usuarios.add(nuevoMiembroUid);
-            	
             }
-            
+        
             if (mensajes.get(nuevoMiembroUid) == null) {
     			LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
     			mensajes.put(nuevoMiembroUid, listaMensajes);
@@ -174,29 +178,6 @@ public class QuePasaMonitor implements QuePasa, Practica {
      */
 
     public void mandarMensaje(int remitenteUid, String grupo, Object contenidos) throws PreconditionFailedException {
-       
-    	/**mutex.enter();
-        
-        if(miembros.containsKey(grupo) && miembros.get(grupo).contains(remitenteUid)){
-        	
-        	Mensaje msg = new Mensaje(remitenteUid, grupo, contenidos);
-        	
-        	for(int i = 0; i < miembros.get(grupo).size() ; i++){
-       
-        		mensajes.get(miembros.get(grupo).get(i)).add(msg);
-        		
-        	}
-        	
-        	desbloquear();
-        	mutex.leave();
-        	
-        }else
-        {
-        	mutex.leave();
-        	throw new PreconditionFailedException();
-        }
-   */
-    
        
         mutex.enter();
 
@@ -230,40 +211,17 @@ public class QuePasaMonitor implements QuePasa, Practica {
      */
 
     public Mensaje leer(int uid) {
- 
-        /**mutex.enter();
-       
-        if(mensajes.get(uid) == null ){
-        	
-        	mensajes.put(uid, new LinkedList<Mensaje>());
-        	condiciones.put(uid, mutex.newCond());
-        	
-        	
-        }
-        
-        if(mensajes.get(uid).size() == 0){
-        	 
-        	condiciones.get(uid).await();
-        	 
-        }
-        
-        Mensaje msg = mensajes.get(uid).get(0);
-        mensajes.get(uid).remove(0);
-        desbloquear();
-        
-        mutex.leave();
-        
-        return msg;*/
-    	
+	
     	mutex.enter();
     	
 		if ( !mensajes.containsKey(uid) || mensajes.get(uid).isEmpty()) {
 
 			if (this.condiciones.get(uid) == null || this.condiciones.isEmpty()) {
 				
-				Monitor.Cond aux = mutex.newCond();
-				this.condiciones.put(uid, aux);
+				Monitor.Cond lectura = mutex.newCond();
+				this.condiciones.put(uid, lectura);
 			}
+			
 			this.condiciones.get(uid).await();
 
 
@@ -282,25 +240,6 @@ public class QuePasaMonitor implements QuePasa, Practica {
 		return resultado;
     }
     
-    public void desbloquear(){
-    	
-    	boolean encontrado = false;
-    	
-    	Iterator<Map.Entry<Integer, Monitor.Cond>> entradas = condiciones.entrySet().iterator();
-    	
-    	while(entradas.hasNext() && !encontrado){
-    		
-    		Map.Entry<Integer, Monitor.Cond> entrada = entradas.next();
-    		
-    		if(!encontrado && mensajes.get(entrada.getKey()).size() > 0 && condiciones.get(entrada.getKey()).waiting()>0){
-    			
-    			entrada.getValue().signal();
-    			encontrado = true;
-    		}
-    	}
-   
-    	
-    }
     public void desbloqueo() {
     	
 		for (int usuario = 0; usuario < usuarios.size(); usuario++) {
