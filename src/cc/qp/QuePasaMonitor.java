@@ -5,6 +5,8 @@ import es.upm.babel.cclib.Monitor;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Iterator;
+import java.util.ArrayList;
 
 
 public class QuePasaMonitor implements QuePasa, Practica {
@@ -14,21 +16,22 @@ public class QuePasaMonitor implements QuePasa, Practica {
      * @attribute mensajes Mapa del tipo <K,V> siendo K el Uid del usuario y V una lista LIFO con los mensajes de ese usuario
      * @attribute mutex Monitor
      */
-    private Map<String, LinkedList<Integer>> miembros = new HashMap<String, LinkedList<Integer>>();
-    private Map<String, Integer> administrador = new HashMap<String, Integer>();
-    private Map<Integer, LinkedList<Mensaje>> mensajes = new HashMap<Integer, LinkedList<Mensaje>>();
+    private HashMap<String, LinkedList<Integer>> miembros = new HashMap<String, LinkedList<Integer>>();
+    private HashMap<String, Integer> administrador = new HashMap<String, Integer>();
+    private HashMap<Integer, LinkedList<Mensaje>> mensajes = new HashMap<Integer, LinkedList<Mensaje>>();
     //private LinkedList<Monitor.Cond> conditions = new LinkedList<Monitor.Cond>();
     //private LinkedList<Integer> usuarios = new LinkedList<Integer>();
-    private Map<Integer, Monitor.Cond> condiciones = new HashMap<Integer, Monitor.Cond>();
+    private HashMap<Integer, Monitor.Cond> condiciones = new HashMap<Integer, Monitor.Cond>();
     private Monitor mutex;
-    //private Monitor.Cond cLeer;
+    private Monitor.Cond cLeer;
+    private ArrayList<Integer> usuarios = new ArrayList<Integer>();
 
     /**
      * Obtiene los nombres de los alumnos que forman parte del grupo
      *
      * @return Alumnos que forman parte del grupo
      */
-    public Alumno[] getAutores() {
+    public Alumno[] getAutores() {   	
         return new Alumno[]{
                 new Alumno("Ignacio de las Alas-Pumariño Martínez", "160066"),
                 new Alumno("Iñigo Aranguren Redondo", "160054")
@@ -37,7 +40,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
     QuePasaMonitor(){
         mutex = new Monitor();
-        //cLeer =  mutex.newCond();
+        cLeer = mutex.newCond();
     }
 
     /**
@@ -51,23 +54,27 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
     public void crearGrupo(int creadorUid, String grupo) throws PreconditionFailedException {
         mutex.enter();
+        
         if (administrador.containsKey(grupo)) {
+        	
             mutex.leave();
             throw new PreconditionFailedException();
         }
+        
+        usuarios.add(creadorUid);
+        
         administrador.put(grupo, creadorUid);
+        
         LinkedList<Integer> listaMiembros = new LinkedList<Integer>();
         listaMiembros.add(creadorUid);
         miembros.put(grupo, listaMiembros);
-        //if (!usuarios.contains(creadorUid)){
-        //    Monitor.Cond cLeer = mutex.newCond();
-        //    conditions.addLast(cLeer);
-        //    usuarios.addLast(creadorUid);
-        //}
-//        if (!mensajes.containsKey(creadorUid)) {
-//            LinkedList<Mensaje> mensajesAux = new LinkedList<Mensaje>();
-//            mensajes.put(creadorUid, mensajesAux);
-//        }
+        
+        if (mensajes.get(creadorUid) == null) {
+			LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
+			mensajes.put(creadorUid, listaMensajes);
+		}
+        
+        
         mutex.leave();
     }
 
@@ -81,7 +88,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
     public void salirGrupo(int usuarioUid, String grupo) throws PreconditionFailedException {
         mutex.enter();
-        if ((administrador.get(grupo) != null && miembros.get(grupo) != null) && (administrador.get(grupo).equals(usuarioUid) || miembros.get(grupo).contains(usuarioUid))) {
+        /**if ((administrador.get(grupo) != null && miembros.get(grupo) != null) && (administrador.get(grupo).equals(usuarioUid) || miembros.get(grupo).contains(usuarioUid))) {
             LinkedList<Mensaje> listaMensajes = mensajes.get(usuarioUid);
             for (int i = 0; i < listaMensajes.size(); i++) {
                 if (listaMensajes.get(i).getGrupo().equals(grupo)) {
@@ -91,11 +98,35 @@ public class QuePasaMonitor implements QuePasa, Practica {
             mensajes.put(usuarioUid, listaMensajes);
             LinkedList<Integer> listaMiembros = miembros.get(grupo);
             listaMiembros.removeFirstOccurrence(usuarioUid);
-            miembros.put(grupo, listaMiembros);
-        } else {
+            miembros.put(grupo, listaMiembros);*/
+       if( miembros.get(grupo) == null || (administrador.containsKey(grupo) && administrador.get(grupo) == usuarioUid ) || !miembros.get(grupo).contains(usuarioUid)){
+    	   
             mutex.leave();
             throw new PreconditionFailedException();
-        }
+       }   
+       
+       for(int usuario = 0; usuario < usuarios.size(); usuario++){
+			
+			if(usuario == usuarioUid){
+				
+				this.usuarios.remove(usuarioUid);
+				
+			}
+		}
+       
+       LinkedList<Mensaje> listaMensajes = mensajes.get(usuarioUid);
+       
+		for (int i = 0; i < listaMensajes.size(); i++) {
+			
+			if (listaMensajes.get(i).getGrupo().equals(grupo)) {
+				
+				listaMensajes.remove(i);
+			}
+		}
+       
+		miembros.get(grupo).removeFirstOccurrence(usuarioUid);
+    		
+       
         mutex.leave();
     }
 
@@ -110,22 +141,25 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
     public void anadirMiembro(int creadorUid, String grupo, int nuevoMiembroUid) throws PreconditionFailedException {
         mutex.enter();
-        if (administrador.containsValue(creadorUid) && !miembros.get(grupo).contains(nuevoMiembroUid)) {
-            LinkedList<Integer> listaMiembros = miembros.get(grupo);
-            listaMiembros.add(nuevoMiembroUid);
-            miembros.put(grupo, listaMiembros);
-            //if (!usuarios.contains(nuevoMiembroUid)){
-            //    Monitor.Cond cLeer = mutex.newCond();
-            //    conditions.addLast(cLeer);
-            //    usuarios.addLast(nuevoMiembroUid);
-            //}
-//            if (!mensajes.containsKey(nuevoMiembroUid)) {
-//                LinkedList<Mensaje> mensajes = new LinkedList<Mensaje>();
-//                this.mensajes.put(nuevoMiembroUid, mensajes);
-//            }
-        } else {
-            mutex.leave();
+        if (!administrador.containsKey(grupo) || administrador.get(grupo) != creadorUid || administrador.get(grupo) == nuevoMiembroUid || (miembros.get(grupo) != null && miembros.get(grupo).contains(nuevoMiembroUid))) {
+        	
+        	mutex.leave();
             throw new PreconditionFailedException();
+            
+        } else {
+           
+            miembros.get(grupo).add(nuevoMiembroUid);
+            
+            if(creadorUid != nuevoMiembroUid){
+            	
+            	this.usuarios.add(nuevoMiembroUid);
+            	
+            }
+            
+            if (mensajes.get(nuevoMiembroUid) == null) {
+    			LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
+    			mensajes.put(nuevoMiembroUid, listaMensajes);
+    		}
         }
         mutex.leave();
     }
@@ -140,80 +174,52 @@ public class QuePasaMonitor implements QuePasa, Practica {
      */
 
     public void mandarMensaje(int remitenteUid, String grupo, Object contenidos) throws PreconditionFailedException {
-//        mutex.enter();
-//        if (!miembros.containsKey(grupo) || !miembros.get(grupo).contains(remitenteUid)) {
-//            mutex.leave();
-//            throw new PreconditionFailedException();
-//        }
-//
-//        Mensaje mensaje = new Mensaje(remitenteUid, grupo, contenidos);
-//        LinkedList<Integer> miembros = this.miembros.get(grupo);
-//        for (int i = 0; i < miembros.size(); i++){
-//            LinkedList<Mensaje> aux = mensajes.get(miembros.get(i));
-//            aux.addLast(mensaje);
-//            mensajes.put(miembros.get(i), aux);
-//        }
-//        unblock();
-//        mutex.leave();
-        boolean flag = false;
+       
+    	/**mutex.enter();
+        
+        if(miembros.containsKey(grupo) && miembros.get(grupo).contains(remitenteUid)){
+        	
+        	Mensaje msg = new Mensaje(remitenteUid, grupo, contenidos);
+        	
+        	for(int i = 0; i < miembros.get(grupo).size() ; i++){
+       
+        		mensajes.get(miembros.get(grupo).get(i)).add(msg);
+        		
+        	}
+        	
+        	desbloquear();
+        	mutex.leave();
+        	
+        }else
+        {
+        	mutex.leave();
+        	throw new PreconditionFailedException();
+        }
+   */
+    
+       
         mutex.enter();
-        if(!miembros.containsKey(grupo) || !miembros.get(grupo).contains(remitenteUid)){
-            mutex.leave();
-            throw new PreconditionFailedException();
-        }
 
-        Mensaje mensaje = new Mensaje(remitenteUid, grupo, contenidos);
-        if(mensajes.get(administrador.get(grupo)) == null){
-            LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
-            listaMensajes.add(mensaje);
-            mensajes.put(administrador.get(grupo), listaMensajes);
-        }
-        else{
-            LinkedList<Mensaje> listaMensajes = mensajes.get(administrador.get(grupo));
-            listaMensajes.add(mensaje);
-            mensajes.put(administrador.get(grupo), listaMensajes);
-        }
+		if (!miembros.containsKey(grupo) || !miembros.get(grupo).contains(remitenteUid)) {
+			
+			mutex.leave();
+			throw new PreconditionFailedException();
+		}
 
-        if (condiciones.get(administrador.get(grupo)) == null){
-            condiciones.put(administrador.get(grupo), mutex.newCond());
-        }
-        else{
-            if(condiciones.get(administrador.get(grupo)).waiting() > 0 && !flag){
-                condiciones.get(administrador.get(grupo)).signal();
-                flag = true;
-            }
-        }
-        if (miembros.get(grupo) != null && !miembros.get(grupo).isEmpty()){
-            for (int i = 0; i < miembros.get(grupo).size(); i++){
-                if (miembros.get(grupo).get(i) != null){
-                    if(mensajes.get(miembros.get(grupo).get(i)) == null){
-                        LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
-                        listaMensajes.add(mensaje);
-                        mensajes.put(miembros.get(grupo).get(i), listaMensajes);
-                        if (condiciones.get(miembros.get(grupo).get(i)) == null){
-                            condiciones.put(miembros.get(grupo).get(i), mutex.newCond());
-                        }
-                        if(condiciones.get(miembros.get(grupo).get(i)).waiting() > 0 && !flag){
-                            condiciones.get(miembros.get(grupo).get(i)).signal();
-                            flag = true;
-                        }
-                    }
-                    else{
-                        LinkedList<Mensaje> listaMensajes = mensajes.get(miembros.get(grupo).get(i));
-                        listaMensajes.add(mensaje);
-                        mensajes.put(miembros.get(grupo).get(i), listaMensajes);
-                        if(condiciones.get(miembros.get(grupo).get(i)) == null){
-                            condiciones.put(miembros.get(grupo).get(i), mutex.newCond());
-                        }
-                        if (condiciones.get(miembros.get(grupo).get(i)).waiting() > 0 && !flag){
-                            condiciones.get(miembros.get(grupo).get(i)).signal();
-                            flag = true;
-                        }
-                    }
-                }
-            }
-        }
-        mutex.leave();
+		LinkedList<Integer> miembro = miembros.get(grupo);
+		Mensaje resultado = new Mensaje(remitenteUid, grupo, contenidos);
+
+		for (int i = 0; i < miembro.size(); i++) {
+			
+			LinkedList<Mensaje> listaMensajes = mensajes.get(miembro.get(i));
+			listaMensajes.addLast(resultado);
+			mensajes.put(miembro.get(i), listaMensajes);
+		}
+		
+		desbloqueo();
+		
+		mutex.leave();
+    	
     }
 
     /**
@@ -224,49 +230,87 @@ public class QuePasaMonitor implements QuePasa, Practica {
      */
 
     public Mensaje leer(int uid) {
-        mutex.enter();
-        if (!mensajes.containsKey(uid) || mensajes.get(uid).isEmpty()) {
-//            if (!usuarios.contains(uid)){
-//                cLeer = mutex.newCond();
-//                conditions.addLast(cLeer);
-//                usuarios.addLast(uid);
-//            }
-//            conditions.get(usuarios.indexOf(uid)).await();
-            if(condiciones.get(uid) == null){
-                condiciones.put(uid, mutex.newCond());
-                condiciones.get(uid).await();
-            }
-            else{
-                condiciones.get(uid).await();
-            }
+ 
+        /**mutex.enter();
+       
+        if(mensajes.get(uid) == null ){
+        	
+        	mensajes.put(uid, new LinkedList<Mensaje>());
+        	condiciones.put(uid, mutex.newCond());
+        	
+        	
         }
-        Mensaje mensaje = mensajes.get(uid).removeFirst();
-        boolean flag = false;
-        for (Integer key : mensajes.keySet()){
-            if(!flag && !mensajes.get(key).isEmpty()){
-                if(condiciones.get(key) != null){
-                    condiciones.get(key).signal();
-                    flag = true;
-                }
-                else{
-                    condiciones.put(key, mutex.newCond());
-                    condiciones.get(key).signal();
-                    flag = true;
-                }
-            }
+        
+        if(mensajes.get(uid).size() == 0){
+        	 
+        	condiciones.get(uid).await();
+        	 
         }
+        
+        Mensaje msg = mensajes.get(uid).get(0);
+        mensajes.get(uid).remove(0);
+        desbloquear();
+        
         mutex.leave();
-        return mensaje;
-    }
+        
+        return msg;*/
+    	
+    	mutex.enter();
+    	
+		if ( !mensajes.containsKey(uid) || mensajes.get(uid).isEmpty()) {
 
-//    private void unblock(){
-//        if (!conditions.isEmpty()){
-//            for (int i = 0; i < conditions.size(); i++){
-//                if (mensajes.containsKey(usuarios.get(i)) && !mensajes.get(usuarios.get(i)).isEmpty()){
-//                    conditions.get(i).signal();
-//                    break;
-//                }
-//            }
-//        }
-//    }
+			if (this.condiciones.get(uid) == null || this.condiciones.isEmpty()) {
+				
+				Monitor.Cond aux = mutex.newCond();
+				this.condiciones.put(uid, aux);
+			}
+			this.condiciones.get(uid).await();
+
+
+		}
+		
+		LinkedList<Mensaje> listaNueva = mensajes.get(uid);
+		Mensaje resultado = listaNueva.pop();
+
+		mensajes.remove(uid);
+		mensajes.put(uid, listaNueva);
+		
+		cLeer.signal();
+		
+		mutex.leave();
+		
+		return resultado;
+    }
+    
+    public void desbloquear(){
+    	
+    	boolean encontrado = false;
+    	
+    	Iterator<Map.Entry<Integer, Monitor.Cond>> entradas = condiciones.entrySet().iterator();
+    	
+    	while(entradas.hasNext() && !encontrado){
+    		
+    		Map.Entry<Integer, Monitor.Cond> entrada = entradas.next();
+    		
+    		if(!encontrado && mensajes.get(entrada.getKey()).size() > 0 && condiciones.get(entrada.getKey()).waiting()>0){
+    			
+    			entrada.getValue().signal();
+    			encontrado = true;
+    		}
+    	}
+   
+    	
+    }
+    public void desbloqueo() {
+    	
+		for (int usuario = 0; usuario < usuarios.size(); usuario++) {
+			
+			if (this.usuarios != null && this.usuarios.get(usuario) != null && this.condiciones.get(usuarios.get(usuario)) != null && this.condiciones.get(usuarios.get(usuario)).waiting() > 0
+					&& !this.mensajes.get(usuarios.get(usuario)).isEmpty()) {
+				
+				this.condiciones.get(usuarios.get(usuario)).signal();
+				cLeer.await();
+			}
+		}
+	}
 }
