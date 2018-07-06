@@ -290,12 +290,15 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
                     // ejecución normal
                     else {
 
+                        // Añadimos al mapa el grupo y el Uid del creador
                         administrador.put(pet.grupo, pet.creadorUid);
 
+                        //Creamos la lista de miembros del grupo y añadimos al creador
                         LinkedList<Integer> listaMiembros = new LinkedList<Integer>();
                         listaMiembros.add(pet.creadorUid);
                         miembros.put(pet.grupo, listaMiembros);
 
+                        //Si el usuario no tiene ya creada la lista de mensajes asociada a su Uid se crea
                         if (mensajes.get(pet.creadorUid) == null) {
                             LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
                             mensajes.put(pet.creadorUid, listaMensajes);
@@ -317,9 +320,10 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
                     // ejecucion normal
                     else {
 
-
+                        // Añadimos el Uid del nuevo miembro a la lista de miembros asociada al grupo
                         miembros.get(pet.grupo).add(pet.nuevoMiembroUid);
 
+                        // Si el nuevo miembro no tiene un alista de mensajes asociada al él, se crea
                         if (mensajes.get(pet.nuevoMiembroUid) == null) {
                             LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
                             mensajes.put(pet.nuevoMiembroUid, listaMensajes);
@@ -342,8 +346,10 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
                     // ejecucion normal
                     else {
 
+                        // Eliminamos al usuario de la lisda de miembros del grupo
                         miembros.get(pet.grupo).removeFirstOccurrence(pet.usuarioUid);
 
+                        // Borramos los mensajes de ese grupo de la lista de mensajes del usuario
                         if (mensajes.get(pet.usuarioUid) != null) {
 
 
@@ -372,14 +378,18 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
                     // ejecucion normal
                     else {
 
-
+                        // Creamos una lista auxiliar con los usuarios pertenecientes al grupo
                         LinkedList<Integer> miembro = miembros.get(pet.grupo);
+                        // Creamos el mensaje
                         Mensaje resultado = new Mensaje(pet.remitenteUid, pet.grupo, pet.contenidos);
 
                         for (Integer aMiembro : miembro) {
 
+                            // Obtenemos la lista de mensajes asociada al miembro
                             LinkedList<Mensaje> listaMensajes = mensajes.get(aMiembro);
+                            // Añadimos el nuevo mensaje
                             listaMensajes.add(resultado);
+                            // Guardamos la lista actualizada en el mapa de mensajes
                             mensajes.put(aMiembro, listaMensajes);
                         }
 
@@ -398,6 +408,7 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
                     // TO DO   usasteis en monitores
                     // TO DO   cambiando Cond por One2OneChannel)
 
+                    // Comprobamos si existe la lista de condiciones. Si existe se añade una nueva, si no es así se crea una lista nueva
                     if (condiciones.get(pet.uid) == null) {
 
                         LinkedList<PetLeer> lecturas = new LinkedList<PetLeer>();
@@ -418,6 +429,7 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
 
                 if (mensajes.get(i) != null && !mensajes.get(i).isEmpty()) {
 
+                    //Comprobamos si el usuario tiene lista de condiciones y se crea una nueva si no es así
                     if (condiciones.get(i) == null) {
 
                         LinkedList<PetLeer> lecturas = new LinkedList<PetLeer>();
@@ -427,6 +439,7 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
 
                         while (!mensajes.get(i).isEmpty() && !condiciones.get(i).isEmpty()) {
 
+                            // Si es posible, leemos el mensaje y lo borramos de la lista de mensajes del usuario
                             msg = mensajes.get(i).removeFirst();
                             pet = condiciones.get(i).removeFirst();
                             pet.chResp.out().write(msg);
