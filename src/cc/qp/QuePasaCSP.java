@@ -42,6 +42,89 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
     }
 
     /**
+     * Clases Auxiliares con sus constructores
+     */
+    public class PetCrearGrupo {
+        public int creadorUid;
+        public String grupo;
+        // para tratamiento de la PRE
+        public One2OneChannel chResp;
+
+        public PetCrearGrupo(int creadorUid, String grupo) {
+            this.creadorUid = creadorUid;
+            this.grupo = grupo;
+            this.chResp = Channel.one2one();
+        }
+    }
+
+    public class PetAnadirMiembro {
+
+        public int creadorUid;
+        public String grupo;
+        public int nuevoMiembroUid;
+
+        // para tratamiento de la PRE
+        public One2OneChannel chResp;
+
+        public PetAnadirMiembro(int creadorUid, String grupo, int nuevoMiembroUid) {
+            this.creadorUid = creadorUid;
+            this.grupo = grupo;
+            this.nuevoMiembroUid = nuevoMiembroUid;
+            this.chResp = Channel.one2one();
+        }
+    }
+
+    public class PetSalirGrupo {
+
+        public int usuarioUid;
+        public String grupo;
+
+        // para tratamiento de la PRE
+        public One2OneChannel chResp;
+
+        public PetSalirGrupo(int usuarioUid, String grupo) {
+
+            this.usuarioUid = usuarioUid;
+            this.grupo = grupo;
+            this.chResp = Channel.one2one();
+        }
+    }
+
+    public class PetMandarMensaje {
+
+        public int remitenteUid;
+        public String grupo;
+        public Object contenidos;
+
+        // para tratamiento de la PRE
+        public One2OneChannel chResp;
+
+        public PetMandarMensaje(int remitenteUid, String grupo, Object contenidos) {
+
+            this.remitenteUid = remitenteUid;
+            this.grupo = grupo;
+            this.contenidos = contenidos;
+            this.chResp = Channel.one2one();
+
+        }
+    }
+
+    public class PetLeer {
+
+        public int uid;
+
+        // para tratamiento de la PRE
+        public One2OneChannel chResp;
+
+        public PetLeer(int uid) {
+
+            this.uid = uid;
+            this.chResp = Channel.one2one();
+
+        }
+    }
+
+    /**
      * Crea la petición para crear un nuevo grupo
      *
      * @param creadorUid Uid del creador del grupo
@@ -353,87 +436,4 @@ public class QuePasaCSP implements QuePasa, CSProcess, Practica {
             }
         } // END while(true) SERVIDOR
     } // END run()
-
-    /**
-     * Clases Auxiliares con sus constructores
-     */
-    public class PetCrearGrupo {
-        public int creadorUid;
-        public String grupo;
-        // para tratamiento de la PRE
-        public One2OneChannel chResp;
-
-        public PetCrearGrupo(int creadorUid, String grupo) {
-            this.creadorUid = creadorUid;
-            this.grupo = grupo;
-            this.chResp = Channel.one2one();
-        }
-    }
-
-    public class PetAnadirMiembro {
-
-        public int creadorUid;
-        public String grupo;
-        public int nuevoMiembroUid;
-
-        // para tratamiento de la PRE
-        public One2OneChannel chResp;
-
-        public PetAnadirMiembro(int creadorUid, String grupo, int nuevoMiembroUid) {
-            this.creadorUid = creadorUid;
-            this.grupo = grupo;
-            this.nuevoMiembroUid = nuevoMiembroUid;
-            this.chResp = Channel.one2one();
-        }
-    }
-
-    public class PetSalirGrupo {
-
-        public int usuarioUid;
-        public String grupo;
-
-        // para tratamiento de la PRE
-        public One2OneChannel chResp;
-
-        public PetSalirGrupo(int usuarioUid, String grupo) {
-
-            this.usuarioUid = usuarioUid;
-            this.grupo = grupo;
-            this.chResp = Channel.one2one();
-        }
-    }
-
-    public class PetMandarMensaje {
-
-        public int remitenteUid;
-        public String grupo;
-        public Object contenidos;
-
-        // para tratamiento de la PRE
-        public One2OneChannel chResp;
-
-        public PetMandarMensaje(int remitenteUid, String grupo, Object contenidos) {
-
-            this.remitenteUid = remitenteUid;
-            this.grupo = grupo;
-            this.contenidos = contenidos;
-            this.chResp = Channel.one2one();
-
-        }
-    }
-
-    public class PetLeer {
-
-        public int uid;
-
-        // para tratamiento de la PRE
-        public One2OneChannel chResp;
-
-        public PetLeer(int uid) {
-
-            this.uid = uid;
-            this.chResp = Channel.one2one();
-
-        }
-    }
 } // END class QuePasaCSP
