@@ -30,7 +30,7 @@ import java.util.Iterator;
 // TO DO
 
 
-public class QuePasaCSP implements QuePasa, CSProcess {
+public class QuePasaCSP implements QuePasa, CSProcess, Practica {
 
     // Creamos un canal por cada operación sin CPRE
     private Any2OneChannel chCrearGrupo =    Channel.any2one();
@@ -256,16 +256,14 @@ public class QuePasaCSP implements QuePasa, CSProcess {
 		// recepción del mensaje
 		PetCrearGrupo pet = (PetCrearGrupo) chCrearGrupo.in().read();
 		// comprobación de la PRE
-		if (administrador.containsKey(pet.grupo)){
-			
+		if (administrador.containsKey(pet.grupo)){		
 			
 			pet.chResp.out().write(false);
 			
 		}
 		// ejecución normal
 		else {
-	        
-			 
+	       		 
 	        administrador.put(pet.grupo, pet.creadorUid);
 	        
 	        LinkedList<Integer> listaMiembros = new LinkedList<Integer>();
@@ -285,7 +283,7 @@ public class QuePasaCSP implements QuePasa, CSProcess {
 		// recepcion del mensaje
 			PetAnadirMiembro pet = (PetAnadirMiembro) chAnadirMiembro.in().read();
 		// comprobacion de la PRE
-			if(!administrador.containsKey(pet.grupo) || administrador.get(pet.grupo) != pet.creadorUid || administrador.get(pet.grupo) == pet.nuevoMiembroUid || (miembros.get(pet.grupo) != null && miembros.get(pet.grupo).contains(pet.nuevoMiembroUid))){
+			if( !administrador.containsKey(pet.grupo) || administrador.get(pet.grupo) != pet.creadorUid || administrador.get(pet.grupo) == pet.nuevoMiembroUid || (miembros.get(pet.grupo) != null && miembros.get(pet.grupo).contains(pet.nuevoMiembroUid))){
 				
 				pet.chResp.out().write(false);
 				
@@ -356,7 +354,7 @@ public class QuePasaCSP implements QuePasa, CSProcess {
 			for (int i = 0; i < miembro.size(); i++) {
 				
 				LinkedList<Mensaje> listaMensajes = mensajes.get(miembro.get(i));
-				listaMensajes.addLast(resultado);
+				listaMensajes.add(resultado);
 				mensajes.put(miembro.get(i), listaMensajes);
 			}  
 	  
@@ -396,23 +394,23 @@ public class QuePasaCSP implements QuePasa, CSProcess {
 	    PetLeer pet;
 	    Mensaje msg;
 	    
-	    for (Integer key : condiciones.keySet()) {
+	    for (Integer i : condiciones.keySet()) {
 	    		
-			if ( !mensajes.get(key).isEmpty() &&  mensajes.get(key) != null) {
+			if (  mensajes.get(i) != null && !mensajes.get(i).isEmpty()) {
 
-				if (condiciones.get(key) == null) {
+				if (condiciones.get(i) == null) {
 
 					LinkedList<PetLeer> lecturas = new LinkedList<PetLeer>();
-					condiciones.put(key, lecturas);
+					condiciones.put(i, lecturas);
 
 				}
 
-				if (!condiciones.get(key).isEmpty()) {
+				else if (!condiciones.get(i).isEmpty()) {
 					
-					while(!mensajes.get(key).isEmpty() && !condiciones.get(key).isEmpty()) {
+					while(!mensajes.get(i).isEmpty() && !condiciones.get(i).isEmpty()) {
 						
-						msg = mensajes.get(key).removeFirst();
-						pet = condiciones.get(key).removeFirst();
+						msg = mensajes.get(i).removeFirst();
+						pet = condiciones.get(i).removeFirst();
 						pet.chResp.out().write(msg);
 					}
 				}
