@@ -27,7 +27,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
     private ArrayList<Integer> usuarios = new ArrayList<Integer>();
 
     /**
-     * Constructor
+     * Constructor QuePasaMonitor
      */
 
     QuePasaMonitor() {
@@ -59,6 +59,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
     public void crearGrupo(int creadorUid, String grupo) throws PreconditionFailedException {
         mutex.enter();
 
+        //Comprobamos que grupo no esta ya registrado en el mapa de administradores.
         if (administrador.containsKey(grupo)) {
 
             mutex.leave();
@@ -67,12 +68,15 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
         usuarios.add(creadorUid);
 
+        // Añadimos al mapa el grupo y su creadorUid.
         administrador.put(grupo, creadorUid);
 
+        // Creamos la lista de miembros que pueden estar asociados al grupo.
         LinkedList<Integer> listaMiembros = new LinkedList<Integer>();
         listaMiembros.add(creadorUid);
         miembros.put(grupo, listaMiembros);
 
+        // Si el usuario no tiene ya creada una lista de mensajes asociadas a su Uid se crea.
         if (mensajes.get(creadorUid) == null) {
             LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
             mensajes.put(creadorUid, listaMensajes);
@@ -94,6 +98,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
         mutex.enter();
 
+        // Comprobamos que se cumple la precondicion.
         if (miembros.get(grupo) == null || (administrador.containsKey(grupo) && administrador.get(grupo) == usuarioUid) || !miembros.get(grupo).contains(usuarioUid)) {
 
             mutex.leave();
@@ -109,8 +114,10 @@ public class QuePasaMonitor implements QuePasa, Practica {
             }
         }
 
+        // Borramos al usuarioUid del grupo.
         miembros.get(grupo).removeFirstOccurrence(usuarioUid);
 
+        // Si el usuario sigue teniendo mensajes asociados al grupo se borran
         if (mensajes.get(usuarioUid) != null) {
 
 
@@ -141,6 +148,7 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
         mutex.enter();
 
+        // Comprobamos que se cumple la precondicion.
         if (!administrador.containsKey(grupo) || administrador.get(grupo) != creadorUid || administrador.get(grupo) == nuevoMiembroUid || (miembros.get(grupo) != null && miembros.get(grupo).contains(nuevoMiembroUid))) {
 
             mutex.leave();
@@ -148,10 +156,13 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
         } else {
 
+        	//añadimos al nuevoMiembroUid a la lista de miembros asociadas al grupo.
             miembros.get(grupo).add(nuevoMiembroUid);
 
+            // boolean para hacer la comprobacion de usuarios no duplicados en el array de usuarios.
             boolean encontrado = false;
 
+            // Si ya existe un usuario que coincida con creadorUid cambiamos encontrado a true.
             for (int i = 0; i < usuarios.size(); i++) {
 
                 if (usuarios.get(i).equals(nuevoMiembroUid)) {
@@ -159,12 +170,13 @@ public class QuePasaMonitor implements QuePasa, Practica {
                     encontrado = true;
                 }
             }
-
+            // Si no se ha encontrado el usuario en el array, lo introducimos.
             if (!encontrado) {
 
                 this.usuarios.add(nuevoMiembroUid);
             }
 
+            // Si el nuevoMiembroUid no tiene una lista de mensajes asociada a el, se crea.
             if (mensajes.get(nuevoMiembroUid) == null) {
                 LinkedList<Mensaje> listaMensajes = new LinkedList<Mensaje>();
                 mensajes.put(nuevoMiembroUid, listaMensajes);
@@ -186,19 +198,25 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
         mutex.enter();
 
+        // Comprobamos que se cumple la precondicion.
         if (!miembros.containsKey(grupo) || !miembros.get(grupo).contains(remitenteUid)) {
 
             mutex.leave();
             throw new PreconditionFailedException();
         }
 
+        // Creamos una lista con todos los miembros pertenecientes al grupo.
         LinkedList<Integer> miembro = miembros.get(grupo);
+        // Creamos el mensaje
         Mensaje resultado = new Mensaje(remitenteUid, grupo, contenidos);
 
         for (int i = 0; i < miembro.size(); i++) {
 
+        	// Obtenemos la lista de mensajes asociadas al miembro.
             LinkedList<Mensaje> listaMensajes = mensajes.get(miembro.get(i));
+            // Añadimos el mensaje a la lista de mensajes.
             listaMensajes.addLast(resultado);
+            // Lo guardamos en el mapa de mensajes
             mensajes.put(miembro.get(i), listaMensajes);
         }
 
@@ -219,22 +237,30 @@ public class QuePasaMonitor implements QuePasa, Practica {
 
         mutex.enter();
 
+        // Comprobamos que se cumple la precondicion.
         if (!mensajes.containsKey(uid) || mensajes.get(uid).isEmpty()) {
 
+        	// Comprobamos que no existe condiciones asociadas al Uid
             if (this.condiciones.get(uid) == null || this.condiciones.isEmpty()) {
 
+            	// Creamos la condicion.
                 Monitor.Cond lectura = mutex.newCond();
+                // Se añade la condicion al usuario Uid.
                 this.condiciones.put(uid, lectura);
             }
-
+            
+         // ponemos la condicion del usuario en espera.
             this.condiciones.get(uid).await();
 
 
         }
 
+        // obtenemos una lista de mensajes del usuario Uid
         LinkedList<Mensaje> listaNueva = mensajes.get(uid);
+        // Sacamos el mensaje
         Mensaje resultado = listaNueva.pop();
 
+        // Modificamos el mapa de mensajes del usuario Uid.
         mensajes.remove(uid);
         mensajes.put(uid, listaNueva);
 
